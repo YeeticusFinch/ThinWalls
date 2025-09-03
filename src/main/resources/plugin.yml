@@ -1,0 +1,4 @@
+name: ThinWalls
+main: com.lerdorf.thinwalls.ThinWalls
+version: 1.0
+api-version: 1.21
