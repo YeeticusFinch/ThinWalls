@@ -247,7 +247,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
             rmeta.getPersistentDataContainer().set(matKey, PersistentDataType.STRING, mat.toString());
             List<String> lore = new ArrayList<String>();
             lore.add(ChatColor.WHITE + mat.toString().toLowerCase());
-            rmeta.setItemModel(NamespacedKey.fromString("tw:paint_roller"));
+            rmeta.setItemModel(NamespacedKey.fromString("tw:" + texture + "_paint_roller"));
          // Create a modifier: +5 attack damage when in main hand
     	    AttributeModifier modifier = new AttributeModifier(
     	        UUID.randomUUID(),         // Unique ID for this modifier
