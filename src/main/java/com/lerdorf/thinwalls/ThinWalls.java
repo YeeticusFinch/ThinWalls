@@ -308,6 +308,11 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
     	BlockFace face = event.getBlockFace();
     	Vector dir = face.getDirection();
     	Location loc = block.getLocation().add(face.getDirection().multiply(0.5));
+
+    	for (BlockDisplay e : loc.getNearbyEntitiesByType(BlockDisplay.class, 0.2f)) {
+    		if (e.isValid())
+    			return;
+    	}
     	
     	// Spawn BlockDisplay
         BlockDisplay display = block.getWorld().spawn(loc, BlockDisplay.class);
