@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -39,6 +40,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
@@ -192,10 +194,11 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
         recipes.add(key);
     }
     
-    private void registerRollerRecipe() {
+    public ItemStack getRoller() {
     	NamespacedKey key = new NamespacedKey(this, "paint_roller");
         ItemStack roller = new ItemStack(Material.WOODEN_SWORD);
-        ItemMeta meta = roller.getItemMeta();
+        Damageable meta = (Damageable) roller.getItemMeta();
+        meta.setMaxDamage(64);
         meta.setDisplayName("§7Paint Roller");
         meta.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, 1);
         meta.setItemModel(NamespacedKey.fromString("tw:paint_roller"));
@@ -211,6 +214,12 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	    // Apply modifier to the attribute
 	    meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, modifier);
         roller.setItemMeta(meta);
+        return roller;
+    }
+    
+    private void registerRollerRecipe() {
+    	NamespacedKey key = new NamespacedKey(this, "paint_roller");
+    	ItemStack roller = getRoller();
 
         ShapedRecipe recipe = new ShapedRecipe(key, roller);
         recipe.shape(
@@ -222,6 +231,58 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
         recipe.setIngredient('I', Material.IRON_NUGGET);
         Bukkit.addRecipe(recipe);
         recipes.add(key);
+        
+        for (int i = 0; i < Resources.matArray.length; i++) {
+        	Material mat = Resources.matArray[i];
+        	String texture = Resources.textureArray[i].strip();
+        	
+        	NamespacedKey rkey = new NamespacedKey(this, texture+"_paint_roller");
+        	NamespacedKey matKey = new NamespacedKey(this, "material");
+            ItemStack rroller = new ItemStack(Material.WOODEN_SWORD);
+            Damageable rmeta = (Damageable) rroller.getItemMeta();
+            rmeta.setMaxDamage(64);
+            rmeta.setDisplayName("§7" + toFancyString(mat.toString()) + " Paint Roller");
+            rmeta.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, 1);
+            rmeta.getPersistentDataContainer().set(rkey, PersistentDataType.INTEGER, 1);
+            rmeta.getPersistentDataContainer().set(matKey, PersistentDataType.STRING, mat.toString());
+            List<String> lore = new ArrayList<String>();
+            lore.add(ChatColor.WHITE + mat.toString().toLowerCase());
+            rmeta.setItemModel(NamespacedKey.fromString("tw:paint_roller"));
+         // Create a modifier: +5 attack damage when in main hand
+    	    AttributeModifier modifier = new AttributeModifier(
+    	        UUID.randomUUID(),         // Unique ID for this modifier
+    	        "zero_damage",           // Internal name
+    	        0,                        // Amount
+    	        AttributeModifier.Operation.ADD_NUMBER, // How it applies
+    	        EquipmentSlot.HAND         // Slot it applies to
+    	    );
+    	    // Apply modifier to the attribute
+    	    rmeta.addAttributeModifier(Attribute.ATTACK_DAMAGE, modifier);
+            roller.setItemMeta(rmeta);
+
+            ShapedRecipe rrecipe = new ShapedRecipe(rkey, rroller);
+            rrecipe.shape(
+            		"RM"
+            		);
+            rrecipe.setIngredient('R', getRoller());
+            rrecipe.setIngredient('M',mat);
+            Bukkit.addRecipe(rrecipe);
+            recipes.add(rkey);
+        }
+    }
+    
+    // Transforms a string like this: "wooden_sword" --> "Wooden Sword"
+    public String toFancyString(String str) {
+    	str = str.toLowerCase().strip().replace('_', ' ');
+    	for (int i = 0; i < str.length()-1; i++) {
+    		if (i == 0) {
+    			str = str.substring(0, 1).toUpperCase() + str.substring(1);
+    		}
+    		else if (str.charAt(i-1) == ' ') {
+    			str = str.substring(0,i)+str.substring(i, i+1).toUpperCase() + str.substring(i+1);
+    		}
+    	}
+    	return str;
     }
     
     @EventHandler
@@ -231,10 +292,38 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	
     void checkRollerClick(PlayerInteractEvent event, ItemStack item) {
     	NamespacedKey rollerKey = new NamespacedKey(plugin, "piant_roller");
+    	NamespacedKey matKey = new NamespacedKey(this, "material");
     	if (!item.getItemMeta().getPersistentDataContainer().has(rollerKey, PersistentDataType.INTEGER)) return;
     	
     	if (event.getPlayer().hasCooldown(Material.WOODEN_SWORD)) return;
     	event.getPlayer().setCooldown(Material.WOODEN_SWORD, 10);
+    	
+    	if (!item.getItemMeta().getPersistentDataContainer().has(matKey, PersistentDataType.STRING)) return;
+    	
+    	Material mat = Material.getMaterial(item.getItemMeta().getPersistentDataContainer().get(matKey, PersistentDataType.STRING));
+    	
+    	Block block = event.getClickedBlock();
+    	if (block == null || block.getType().isAir() || block.isLiquid()) return;
+    	
+    	BlockFace face = event.getBlockFace();
+    	Vector dir = face.getDirection();
+    	Location loc = block.getLocation().add(face.getDirection().multiply(0.5));
+    	
+    	// Spawn BlockDisplay
+        BlockDisplay display = block.getWorld().spawn(loc, BlockDisplay.class);
+        display.setBlock(Bukkit.createBlockData(mat));
+        display.addScoreboardTag("paint");
+        Transformation t = new Transformation(
+        	    new Vector3f(0, 0, 0),
+        	    new AxisAngle4f(), // identity rotation
+        	    new Vector3f((float) (1-Math.abs(dir.getX()/16f)), (float) (1-Math.abs(dir.getY()/16f)), (float)(1-Math.abs(dir.getX()/16f))),
+        	    new AxisAngle4f()  // identity rotation
+        	);
+
+        display.setTransformation(t);
+        
+        item.damage(1, event.getPlayer());
+        event.setCancelled(true);
     }
     
     void checkChiselClick(PlayerInteractEvent event, ItemStack item) {
