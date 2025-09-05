@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -36,6 +37,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -48,6 +51,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
@@ -296,6 +300,31 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		event.getPlayer().discoverRecipes(recipes);
 	}
 	
+    @EventHandler
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        Vector dir = event.getDirection().getDirection();
+        for (Block block : event.getBlocks()) {
+            Location loc = block.getLocation().add(0.5, 0.5, 0.5);
+            for (BlockDisplay display : loc.getNearbyEntitiesByType(BlockDisplay.class, 1)) {
+                if (display.getScoreboardTags().contains("paint")) {
+                    display.teleport(display.getLocation().add(dir));
+                }
+            }
+        }
+    }
+    
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        Location loc = block.getLocation().add(0.5, 0.5, 0.5);
+
+        for (BlockDisplay display : loc.getNearbyEntitiesByType(BlockDisplay.class, 1)) {
+            if (display.getScoreboardTags().contains("paint")) {
+                display.remove();
+            }
+        }
+    }
+    
     void checkRollerClick(PlayerInteractEvent event, ItemStack item) {
     	if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
     	//event.getPlayer().sendMessage("Checking roller click");
@@ -351,6 +380,30 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
         event.setCancelled(true);
     }
     
+    Set<Material> UNCHISELABLE = Set.of(
+    	    Material.BEDROCK,
+    	    Material.OBSIDIAN,
+    	    Material.CRYING_OBSIDIAN,
+    	    Material.ANCIENT_DEBRIS,
+    	    Material.NETHERITE_BLOCK,
+    	    Material.REINFORCED_DEEPSLATE,
+    	    Material.BARRIER,
+    	    Material.STRUCTURE_BLOCK,
+    	    Material.STRUCTURE_VOID,
+    	    Material.WATER,
+    	    Material.LAVA,
+    	    Material.AIR,
+    	    Material.CAVE_AIR,
+    	    Material.VOID_AIR
+    	);
+    
+    boolean isFullBlock(Block block) {
+    	BoundingBox box = block.getBoundingBox();
+    	boolean isFullCube = box.getMinX() == 0.0 && box.getMinY() == 0.0 && box.getMinZ() == 0.0
+    	                  && box.getMaxX() == 1.0 && box.getMaxY() == 1.0 && box.getMaxZ() == 1.0;
+    	return isFullCube;
+    }
+    
     void checkChiselClick(PlayerInteractEvent event, ItemStack item) {
     	NamespacedKey chiselKey = new NamespacedKey(plugin, "flint_chisel");
         if (!item.getItemMeta().getPersistentDataContainer().has(chiselKey, PersistentDataType.INTEGER)) return;
@@ -377,7 +430,11 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
         } else {
 
 	        Block block = event.getClickedBlock();
-	        if (block == null || block.isLiquid() || block.getType().isAir()) return;
+	        if (UNCHISELABLE.contains(block.getType())) {
+	            event.getPlayer().sendMessage(ChatColor.RED + "You can't chisel this block!");
+	            return;
+	        }
+	        if (block == null || block.isLiquid() || block.getType().isAir() || !block.isSolid() || !isFullBlock(block)) return;
 	        Location blockLoc = block.getLocation();
 	
 	        // Replace the block with air
