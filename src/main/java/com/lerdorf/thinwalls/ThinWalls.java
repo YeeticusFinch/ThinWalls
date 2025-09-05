@@ -35,10 +35,12 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -127,6 +129,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	@Override
 	public void onEnable() {
 		plugin = this;
+		rollerKey = new NamespacedKey(plugin, "piant_roller");
 		getServer().getPluginManager().registerEvents(this, this);
 
 		//this.getCommand("wall").setExecutor(this);
@@ -194,59 +197,60 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
         recipes.add(key);
     }
     
-    public ItemStack getRoller() {
-    	NamespacedKey key = new NamespacedKey(this, "paint_roller");
-        ItemStack roller = new ItemStack(Material.WOODEN_SWORD);
-        Damageable meta = (Damageable) roller.getItemMeta();
-        meta.setMaxDamage(64);
-        meta.setDisplayName("§7Paint Roller");
-        meta.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, 1);
-        meta.setItemModel(NamespacedKey.fromString("tw:paint_roller"));
-     // Create a modifier: +5 attack damage when in main hand
-	    AttributeModifier modifier = new AttributeModifier(
-	        UUID.randomUUID(),         // Unique ID for this modifier
-	        "zero_damage",           // Internal name
-	        0,                        // Amount
-	        AttributeModifier.Operation.ADD_NUMBER, // How it applies
-	        EquipmentSlot.HAND         // Slot it applies to
-	    );
 
-	    // Apply modifier to the attribute
-	    meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, modifier);
-        roller.setItemMeta(meta);
-        return roller;
-    }
+	NamespacedKey rollerKey = null;
     
     private void registerRollerRecipe() {
-    	NamespacedKey key = new NamespacedKey(this, "paint_roller");
-    	ItemStack roller = getRoller();
 
-        ShapedRecipe recipe = new ShapedRecipe(key, roller);
-        recipe.shape(
-        		"IWI",
-        		" S "
-        		);
-        recipe.setIngredient('W', Material.WHITE_WOOL);
-        recipe.setIngredient('S', Material.STICK);
-        recipe.setIngredient('I', Material.IRON_NUGGET);
-        Bukkit.addRecipe(recipe);
-        recipes.add(key);
         
         for (int i = 0; i < Resources.matArray.length; i++) {
         	Material mat = Resources.matArray[i];
-        	String texture = Resources.textureArray[i].strip();
+        	String[] matComp = mat.toString().toLowerCase().strip().split("_");
+        	String texture = null;
+        	for (String temp : Resources.textureArray) {
+        		boolean isTexture = true;
+        		for (String comp : matComp) {
+        			if (!temp.toLowerCase().contains(comp.toLowerCase())) {
+        				isTexture = false;
+        				break;
+        			}
+        		}
+        		if (isTexture) {
+        			texture = temp;
+        			break;
+        		}
+        	}
+        	if (texture == null) {
+            	for (String temp : Resources.textureArray) {
+            		boolean isTexture = true;
+            		for (String comp : matComp) {
+            			if (comp.equalsIgnoreCase("block") || comp.equalsIgnoreCase("top") || comp.equalsIgnoreCase("side") || comp.equalsIgnoreCase("front"))
+            			if (!temp.toLowerCase().contains(comp.toLowerCase())) {
+            				isTexture = false;
+            				break;
+            			}
+            		}
+            		if (isTexture) {
+            			texture = temp;
+            			break;
+            		}
+            	}
+        	}
+        	if (texture == null)
+        		texture = Resources.textureArray[i].strip();
         	
-        	NamespacedKey rkey = new NamespacedKey(this, texture+"_paint_roller");
+        	NamespacedKey rkey = new NamespacedKey(this, mat.toString().toLowerCase()+"_paint_roller");
         	NamespacedKey matKey = new NamespacedKey(this, "material");
             ItemStack rroller = new ItemStack(Material.WOODEN_SWORD);
             Damageable rmeta = (Damageable) rroller.getItemMeta();
             rmeta.setMaxDamage(64);
             rmeta.setDisplayName("§7" + toFancyString(mat.toString()) + " Paint Roller");
-            rmeta.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, 1);
+            rmeta.getPersistentDataContainer().set(rollerKey, PersistentDataType.INTEGER, 1);
             rmeta.getPersistentDataContainer().set(rkey, PersistentDataType.INTEGER, 1);
             rmeta.getPersistentDataContainer().set(matKey, PersistentDataType.STRING, mat.toString());
             List<String> lore = new ArrayList<String>();
             lore.add(ChatColor.WHITE + mat.toString().toLowerCase());
+            rmeta.setLore(lore);
             rmeta.setItemModel(NamespacedKey.fromString("tw:" + texture + "_paint_roller"));
          // Create a modifier: +5 attack damage when in main hand
     	    AttributeModifier modifier = new AttributeModifier(
@@ -258,14 +262,16 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
     	    );
     	    // Apply modifier to the attribute
     	    rmeta.addAttributeModifier(Attribute.ATTACK_DAMAGE, modifier);
-            roller.setItemMeta(rmeta);
+            rroller.setItemMeta(rmeta);
 
             ShapedRecipe rrecipe = new ShapedRecipe(rkey, rroller);
             rrecipe.shape(
-            		"RM"
+            		"IWI",
+            		" S "
             		);
-            rrecipe.setIngredient('R', getRoller());
-            rrecipe.setIngredient('M',mat);
+            rrecipe.setIngredient('W', mat);
+            rrecipe.setIngredient('S', Material.STICK);
+            rrecipe.setIngredient('I', Material.IRON_NUGGET);
             Bukkit.addRecipe(rrecipe);
             recipes.add(rkey);
         }
@@ -291,23 +297,31 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	}
 	
     void checkRollerClick(PlayerInteractEvent event, ItemStack item) {
-    	NamespacedKey rollerKey = new NamespacedKey(plugin, "piant_roller");
+    	//event.getPlayer().sendMessage("Checking roller click");
     	NamespacedKey matKey = new NamespacedKey(this, "material");
     	if (!item.getItemMeta().getPersistentDataContainer().has(rollerKey, PersistentDataType.INTEGER)) return;
+    	
+    	//event.getPlayer().sendMessage("Used roller");
     	
     	if (event.getPlayer().hasCooldown(Material.WOODEN_SWORD)) return;
     	event.getPlayer().setCooldown(Material.WOODEN_SWORD, 10);
     	
+    	//event.getPlayer().sendMessage("No Cooldown");
+    	
     	if (!item.getItemMeta().getPersistentDataContainer().has(matKey, PersistentDataType.STRING)) return;
+    	
+    	//event.getPlayer().sendMessage("Has Mat key");
     	
     	Material mat = Material.getMaterial(item.getItemMeta().getPersistentDataContainer().get(matKey, PersistentDataType.STRING));
     	
     	Block block = event.getClickedBlock();
     	if (block == null || block.getType().isAir() || block.isLiquid()) return;
     	
+    	//event.getPlayer().sendMessage("Clicked block");
+    	
     	BlockFace face = event.getBlockFace();
     	Vector dir = face.getDirection();
-    	Location loc = block.getLocation().add(face.getDirection().multiply(0.5));
+    	Location loc = block.getLocation().add(0.5f, 0.5f, 0.5f).add(face.getDirection().multiply(0.5f));
 
     	for (BlockDisplay e : loc.getNearbyEntitiesByType(BlockDisplay.class, 0.2f)) {
     		if (e.isValid())
@@ -319,9 +333,9 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
         display.setBlock(Bukkit.createBlockData(mat));
         display.addScoreboardTag("paint");
         Transformation t = new Transformation(
-        	    new Vector3f(0, 0, 0),
+        	    new Vector3f(0f, 0f, 0f),
         	    new AxisAngle4f(), // identity rotation
-        	    new Vector3f((float) (1-Math.abs(dir.getX()/16f)), (float) (1-Math.abs(dir.getY()/16f)), (float)(1-Math.abs(dir.getX()/16f))),
+        	    new Vector3f((float) (1-Math.abs(dir.getX()*15f/16f)), (float) (1-Math.abs(dir.getY()*15f/16f)), (float)(1-Math.abs(dir.getZ()*15f/16f))),
         	    new AxisAngle4f()  // identity rotation
         	);
 
@@ -357,6 +371,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
         } else {
 
 	        Block block = event.getClickedBlock();
+	        if (block == null || block.isLiquid() || block.getType().isAir()) return;
 	        Location blockLoc = block.getLocation();
 	
 	        // Replace the block with air
@@ -444,6 +459,8 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
     @EventHandler
     public void onItemClick(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
+        
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
         ItemStack item = event.getItem();
         if (item == null || item.getItemMeta() == null) return;

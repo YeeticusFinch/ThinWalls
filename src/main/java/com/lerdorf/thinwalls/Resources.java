@@ -130,7 +130,7 @@ public class Resources {
 		+ "cracked_stone_bricks\r\n"
 		+ "mossy_stone_bricks\r\n"
 		+ "tnt_side\r\n"
-		+ "black_CONCRETE_POWDER\r\n"
+		+ "black_wool\r\n"
 		+ "blue_wool\r\n"
 		+ "brown_wool\r\n"
 		+ "cyan_wool\r\n"
