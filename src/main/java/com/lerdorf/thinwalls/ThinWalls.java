@@ -297,6 +297,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	}
 	
     void checkRollerClick(PlayerInteractEvent event, ItemStack item) {
+    	if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
     	//event.getPlayer().sendMessage("Checking roller click");
     	NamespacedKey matKey = new NamespacedKey(this, "material");
     	if (!item.getItemMeta().getPersistentDataContainer().has(rollerKey, PersistentDataType.INTEGER)) return;
@@ -333,13 +334,16 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
         display.setBlock(Bukkit.createBlockData(mat));
         display.addScoreboardTag("paint");
         Transformation t = new Transformation(
-        	    new Vector3f(0f, 0f, 0f),
+        	    new Vector3f(Math.abs(dir.getX()) > 0.1 ? 0f : -0.5f, Math.abs(dir.getY()) > 0.1 ? 0f : -0.5f, Math.abs(dir.getZ()) > 0.1 ? 0f : -0.5f),
         	    new AxisAngle4f(), // identity rotation
         	    new Vector3f((float) (1-Math.abs(dir.getX()*15f/16f)), (float) (1-Math.abs(dir.getY()*15f/16f)), (float)(1-Math.abs(dir.getZ()*15f/16f))),
         	    new AxisAngle4f()  // identity rotation
         	);
 
         display.setTransformation(t);
+        
+        loc.getWorld().spawnParticle(Particle.BLOCK, loc, 10, 0, 0, 0, 0, mat.createBlockData());
+        loc.getWorld().playSound(loc, Sound.ENTITY_ITEM_FRAME_ADD_ITEM, 0.6f, 0.5f);
         
         item.damage(1, event.getPlayer());
         event.setCancelled(true);
@@ -460,7 +464,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
     public void onItemClick(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
         
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK && event.getAction() != Action.RIGHT_CLICK_AIR) return;
 
         ItemStack item = event.getItem();
         if (item == null || item.getItemMeta() == null) return;
