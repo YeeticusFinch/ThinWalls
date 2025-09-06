@@ -516,7 +516,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			return;
 		event.getPlayer().setCooldown(Material.WOODEN_SWORD, 10);
 
-		event.getPlayer().sendMessage("Chisel right click");
+		//event.getPlayer().sendMessage("Chisel right click");
 
 		Entity hitEntity = null;
 		Vector dir = event.getPlayer().getEyeLocation().getDirection().normalize();
@@ -568,24 +568,22 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			}
 			else if (block != null) {
 				BlockFace face = event.getBlockFace();
-				if (face != null) {
-					Location loc = block.getLocation().add(0.5f, 0.5f, 0.5f).add(face.getDirection().multiply(0.5f));
-					if (face.getDirection().getX() < -0.01 || face.getDirection().getY() < -0.01
-							|| face.getDirection().getZ() < -0.01)
-						loc.add(face.getDirection().multiply(1 / 16f));
+				Location loc = block.getLocation().add(0.5f, 0.5f, 0.5f).add(face.getDirection().multiply(0.5f));
+				if (face.getDirection().getX() < -0.01 || face.getDirection().getY() < -0.01
+						|| face.getDirection().getZ() < -0.01)
+					loc.add(face.getDirection().multiply(1 / 16f));
 
-					for (BlockDisplay e : loc.getNearbyEntitiesByType(BlockDisplay.class, 0.2f)) {
-						if (e.isValid()) {
-							hitEntity = e;
-							break;
-						}
+				for (BlockDisplay e : loc.getNearbyEntitiesByType(BlockDisplay.class, 0.5f)) {
+					if (e.isValid() && isAttached(e, block)) {
+						hitEntity = e;
+						break;
 					}
 				}
 			}
 		}
 
 		if (hitEntity != null) {
-			event.getPlayer().sendMessage("Hit entity!");
+			//event.getPlayer().sendMessage("Hit entity!");
 			BlockDisplay display = (BlockDisplay) hitEntity;
 
 			// Read block material
@@ -600,7 +598,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			String axisTag = display.getScoreboardTags().stream().filter(tag -> tag.startsWith("chisel_axis:"))
 					.findFirst().orElse(null);
 
-			event.getPlayer().sendMessage("Axis tag: " + axisTag);
+			//event.getPlayer().sendMessage("Axis tag: " + axisTag);
 
 			String axis;
 			if (axisTag != null) {
@@ -624,8 +622,8 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			};
 
 			// Reduce thickness
-			float newScale = currentScale - 0.2f;
-			if (newScale <= 0.2f) {
+			float newScale = currentScale - 0.15f;
+			if (newScale <= 0.25f) {
 				display.getWorld().playSound(display.getLocation(), Sound.BLOCK_STONE_BREAK, 1.0f, 1.0f);
 				display.getLocation().getBlock().setType(Material.AIR);
 				display.remove(); // too thin, delete
@@ -643,7 +641,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			event.setCancelled(true);
 			return;
 		} else {
-			event.getPlayer().sendMessage("Hit block");
+			//event.getPlayer().sendMessage("Hit block");
 			Block block = event.getClickedBlock();
 			if (block == null)
 				return;
@@ -654,7 +652,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			if (block.isLiquid() || block.getType().isAir() || !isFullBlock(block))
 				return;
 			
-			event.getPlayer().sendMessage("Block is valid");
+			//event.getPlayer().sendMessage("Block is valid");
 
 			Location loc = block.getLocation();
 			Material mat = block.getType();
@@ -678,37 +676,40 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	
 	public void setThinWallTransform(BlockDisplay display, BlockFace face, float newScale) {
 		Vector3f scale = new Vector3f(1.05f, 1.05f, 1.05f);
-		Vector3f offset = new Vector3f(0, 0, 0);
+		Vector3f offset = new Vector3f(-0.025f, -0.025f, -0.025f);
 
 		switch (face) {
 		case SOUTH -> {
 			scale.z = newScale;
 			//offset.z = (1 - newScale) / 2;
+			offset.z += 0.05f;
 			display.addScoreboardTag("chisel_axis:Z");
 		}
 		case NORTH -> {
 			scale.z = newScale;
-			offset.z = (1 - newScale);
+			offset.z += (1 - newScale);
 			display.addScoreboardTag("chisel_axis:Z");
 		}
 		case WEST -> {
 			scale.x = newScale;
-			offset.x = (1 - newScale);
+			offset.x += (1 - newScale);
 			display.addScoreboardTag("chisel_axis:X");
 		}
 		case EAST -> {
 			scale.x = newScale;
+			offset.x += 0.05f;
 			//offset.x = (1 - newScale) / 2;
 			display.addScoreboardTag("chisel_axis:X");
 		}
 		case DOWN -> {
 			scale.y = newScale;
-			offset.y = (1 - newScale);
+			offset.y += (1 - newScale);
 			display.addScoreboardTag("chisel_axis:Y");
 		}
 		case UP -> {
 			scale.y = newScale;
-			offset.y = (1 - newScale) / 2;
+			//offset.y += (1 - newScale) / 2;
+			offset.y += 0.05f;
 			display.addScoreboardTag("chisel_axis:Y");
 		}
 		}
@@ -726,7 +727,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			return;
 		event.getPlayer().setCooldown(Material.WOODEN_SWORD, 10);
 
-		event.getPlayer().sendMessage("Chisel left click");
+		//event.getPlayer().sendMessage("Chisel left click");
 
 		Entity hitEntity = null;
 		Vector dir = event.getPlayer().getEyeLocation().getDirection().normalize();
@@ -781,7 +782,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		if (hitEntity != null && hitEntity instanceof BlockDisplay display) {
 			if (!hitEntity.getScoreboardTags().contains("thin_wall"))
 				return;
-			event.getPlayer().sendMessage("Hit entity with left click");
+			//event.getPlayer().sendMessage("Hit entity with left click");
 
 			Vector3f scale = display.getTransformation().getScale();
 			boolean canDrop = scale.x >= 0.5f && scale.y >= 0.5f && scale.z >= 0.5f;
@@ -789,7 +790,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			Material mat = display.getBlock().getMaterial();
 			display.getLocation().getBlock().setType(Material.AIR);
 			display.remove();
-			event.getPlayer().sendMessage("Removing blockdisplay");
+			//event.getPlayer().sendMessage("Removing blockdisplay");
 
 			if (canDrop) {
 				event.getPlayer().getWorld().dropItemNaturally(display.getLocation(), new ItemStack(mat));
@@ -829,7 +830,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			data.setOpen(true);
 		} else {
 			data.setFacing(BlockFace.NORTH);
-			if (facing == BlockFace.UP)
+			if (facing == BlockFace.DOWN)
 				data.setHalf(Bisected.Half.TOP);
 			else
 				data.setHalf(Bisected.Half.BOTTOM);
