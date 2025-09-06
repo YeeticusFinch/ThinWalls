@@ -40,6 +40,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
+import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -370,6 +371,21 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			return paintedBlock.getX() == block.getX() && paintedBlock.getY() == block.getY() && paintedBlock.getZ() == block.getZ();
 		}
 	}
+	
+	@EventHandler
+	public void onRedstone(BlockRedstoneEvent event) {
+	    Block block = event.getBlock();
+
+	    if (block.getType() == Material.IRON_TRAPDOOR) {
+	        // If this trapdoor is one of ours (thin wall hitbox)
+	    	Location loc = block.getLocation().add(0.5, 0.5, 0.5);
+	    	for (BlockDisplay display : loc.getNearbyEntitiesByType(BlockDisplay.class, 1)) {
+				if (display.getScoreboardTags().contains("thin_wall") && isAttached(display, block)) {
+					event.setNewCurrent(event.getOldCurrent());
+				}
+			}
+	    }
+	}
 
 	@EventHandler
 	public void onBlockBreak(BlockBreakEvent event) {
@@ -640,7 +656,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			
 			event.getPlayer().sendMessage("Block is valid");
 
-			Location loc = block.getLocation().add(-0.5f, -0.5f, -0.5f);
+			Location loc = block.getLocation();
 			Material mat = block.getType();
 
 			// Replace with BlockDisplay
@@ -661,36 +677,36 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	}
 	
 	public void setThinWallTransform(BlockDisplay display, BlockFace face, float newScale) {
-		Vector3f scale = new Vector3f(1.02f, 1.02f, 1.02f);
+		Vector3f scale = new Vector3f(1.05f, 1.05f, 1.05f);
 		Vector3f offset = new Vector3f(0, 0, 0);
 
 		switch (face) {
-		case NORTH -> {
+		case SOUTH -> {
 			scale.z = newScale;
 			//offset.z = (1 - newScale) / 2;
 			display.addScoreboardTag("chisel_axis:Z");
 		}
-		case SOUTH -> {
+		case NORTH -> {
 			scale.z = newScale;
 			offset.z = (1 - newScale);
 			display.addScoreboardTag("chisel_axis:Z");
 		}
-		case EAST -> {
+		case WEST -> {
 			scale.x = newScale;
 			offset.x = (1 - newScale);
 			display.addScoreboardTag("chisel_axis:X");
 		}
-		case WEST -> {
+		case EAST -> {
 			scale.x = newScale;
 			//offset.x = (1 - newScale) / 2;
 			display.addScoreboardTag("chisel_axis:X");
 		}
-		case UP -> {
+		case DOWN -> {
 			scale.y = newScale;
 			offset.y = (1 - newScale);
 			display.addScoreboardTag("chisel_axis:Y");
 		}
-		case DOWN -> {
+		case UP -> {
 			scale.y = newScale;
 			offset.y = (1 - newScale) / 2;
 			display.addScoreboardTag("chisel_axis:Y");
@@ -807,7 +823,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		block.setType(Material.IRON_TRAPDOOR, false);
 
 		TrapDoor data = (TrapDoor) Bukkit.createBlockData(Material.IRON_TRAPDOOR);
-		if (facing.isCartesian()) {
+		if (facing == BlockFace.EAST || facing == BlockFace.SOUTH || facing == BlockFace.NORTH || facing == BlockFace.WEST) {
 			data.setFacing(facing);
 			data.setHalf(Bisected.Half.BOTTOM);
 			data.setOpen(true);
