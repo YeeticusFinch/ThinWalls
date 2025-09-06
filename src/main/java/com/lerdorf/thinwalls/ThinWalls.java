@@ -304,6 +304,10 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 					display.teleport(display.getLocation().add(dir));
 					moved.add(display);
 				}
+				else if (display.getScoreboardTags().contains("thin_wall")) {
+					display.teleport(display.getLocation().add(dir));
+					moved.add(display);
+				}
 			}
 			
 			loc = loc.add(dir);
@@ -317,13 +321,17 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	}
 	
 	@EventHandler
-	public void onRetractExtend(BlockPistonRetractEvent event) {
+	public void onPistonRetract(BlockPistonRetractEvent event) {
 		Vector dir = event.getDirection().getDirection();
 		List<BlockDisplay> moved = new ArrayList<BlockDisplay>();
 		for (Block block : event.getBlocks()) {
 			Location loc = block.getLocation().add(0.5, 0.5, 0.5);
 			for (BlockDisplay display : loc.getNearbyEntitiesByType(BlockDisplay.class, 1)) {
 				if (display.getScoreboardTags().contains("paint") && isAttached(display, block)) {
+					display.teleport(display.getLocation().add(dir));
+					moved.add(display);
+				}
+				else if (display.getScoreboardTags().contains("thin_wall")) {
 					display.teleport(display.getLocation().add(dir));
 					moved.add(display);
 				}
@@ -374,6 +382,9 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			}
 			if (display.getScoreboardTags().contains("thin_wall") && isAttached(display, block)) {
 				display.remove();
+				if (block.getType() == Material.IRON_TRAPDOOR) {
+					event.setDropItems(false);
+				}
 			}
 		}
 	}
@@ -527,7 +538,35 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		        break;
 		    }
 		}
+		
+		if (hitEntity == null) {
+			Block block = event.getClickedBlock();
+			if (block != null && block.getType() == Material.IRON_TRAPDOOR) {
+				Collection<Entity> nearbyEntities = block.getLocation().add(0.5f, 0.5f, 0.5f).getNearbyEntitiesByType(BlockDisplay.class, 1);
+				for (Entity e : nearbyEntities) {
+					if (e.getScoreboardTags().contains("thin_wall")) {
+						hitEntity = e;
+						break;
+					}
+				}
+			}
+			else if (block != null) {
+				BlockFace face = event.getBlockFace();
+				if (face != null) {
+					Location loc = block.getLocation().add(0.5f, 0.5f, 0.5f).add(face.getDirection().multiply(0.5f));
+					if (face.getDirection().getX() < -0.01 || face.getDirection().getY() < -0.01
+							|| face.getDirection().getZ() < -0.01)
+						loc.add(face.getDirection().multiply(1 / 16f));
 
+					for (BlockDisplay e : loc.getNearbyEntitiesByType(BlockDisplay.class, 0.2f)) {
+						if (e.isValid()) {
+							hitEntity = e;
+							break;
+						}
+					}
+				}
+			}
+		}
 
 		if (hitEntity != null) {
 			event.getPlayer().sendMessage("Hit entity!");
@@ -571,34 +610,14 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			// Reduce thickness
 			float newScale = currentScale - 0.2f;
 			if (newScale <= 0.2f) {
-				display.remove(); // too thin, delete
 				display.getWorld().playSound(display.getLocation(), Sound.BLOCK_STONE_BREAK, 1.0f, 1.0f);
+				display.getLocation().getBlock().setType(Material.AIR);
+				display.remove(); // too thin, delete
 				return;
 			}
 
 			// Apply new scale & offset
-			Vector3f newScaleVec = new Vector3f(scaleVec.x, scaleVec.y, scaleVec.z);
-			Vector3f newOffset = new Vector3f(transVec.x, transVec.y, transVec.z);
-
-			switch (axis) {
-			case "X" -> {
-				newScaleVec.x = newScale;
-				newOffset.x = (scaleVec.x > newScale) ? (1.0f - newScale) / 2 : transVec.x;
-			}
-			case "Y" -> {
-				newScaleVec.y = newScale;
-				newOffset.y = (scaleVec.y > newScale) ? (1.0f - newScale) / 2 : transVec.y;
-			}
-			case "Z" -> {
-				newScaleVec.z = newScale;
-				newOffset.z = (scaleVec.z > newScale) ? (1.0f - newScale) / 2 : transVec.z;
-			}
-			}
-
-			Transformation t = new Transformation(newOffset, old.getLeftRotation(), newScaleVec,
-					old.getRightRotation());
-
-			display.setTransformation(t);
+			setThinWallTransform(display, event.getBlockFace(), newScale);
 
 			// Feedback
 			display.getWorld().playSound(display.getLocation(), Sound.BLOCK_STONE_PLACE, 0.8f, 1.0f);
@@ -621,7 +640,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			
 			event.getPlayer().sendMessage("Block is valid");
 
-			Location loc = block.getLocation();
+			Location loc = block.getLocation().add(-0.5f, -0.5f, -0.5f);
 			Material mat = block.getType();
 
 			// Replace with BlockDisplay
@@ -632,49 +651,54 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 
 			// Start scale at full, shrink on clicked face
 			float newScale = 0.8f; // first shrink
-			Vector3f scale = new Vector3f(1.01f, 1.01f, 1.01f);
-			Vector3f offset = new Vector3f(0, 0, 0);
-
-			switch (event.getBlockFace()) {
-			case NORTH -> {
-				scale.z = newScale;
-				offset.z = (1 - newScale) / 2;
-				display.addScoreboardTag("chisel_axis:Z");
-			}
-			case SOUTH -> {
-				scale.z = newScale;
-				offset.z = -(1 - newScale) / 2;
-				display.addScoreboardTag("chisel_axis:Z");
-			}
-			case EAST -> {
-				scale.x = newScale;
-				offset.x = -(1 - newScale) / 2;
-				display.addScoreboardTag("chisel_axis:X");
-			}
-			case WEST -> {
-				scale.x = newScale;
-				offset.x = (1 - newScale) / 2;
-				display.addScoreboardTag("chisel_axis:X");
-			}
-			case UP -> {
-				scale.y = newScale;
-				offset.y = -(1 - newScale) / 2;
-				display.addScoreboardTag("chisel_axis:Y");
-			}
-			case DOWN -> {
-				scale.y = newScale;
-				offset.y = (1 - newScale) / 2;
-				display.addScoreboardTag("chisel_axis:Y");
-			}
-			}
+			
+			setThinWallTransform(display, event.getBlockFace(), newScale);
 
 			placeTrapdoor(loc, event.getBlockFace());
-			
-			Transformation t = new Transformation(offset, new AxisAngle4f(), scale, new AxisAngle4f());
-			display.setTransformation(t);
 
 			event.setCancelled(true);
 		}
+	}
+	
+	public void setThinWallTransform(BlockDisplay display, BlockFace face, float newScale) {
+		Vector3f scale = new Vector3f(1.02f, 1.02f, 1.02f);
+		Vector3f offset = new Vector3f(0, 0, 0);
+
+		switch (face) {
+		case NORTH -> {
+			scale.z = newScale;
+			//offset.z = (1 - newScale) / 2;
+			display.addScoreboardTag("chisel_axis:Z");
+		}
+		case SOUTH -> {
+			scale.z = newScale;
+			offset.z = (1 - newScale);
+			display.addScoreboardTag("chisel_axis:Z");
+		}
+		case EAST -> {
+			scale.x = newScale;
+			offset.x = (1 - newScale);
+			display.addScoreboardTag("chisel_axis:X");
+		}
+		case WEST -> {
+			scale.x = newScale;
+			//offset.x = (1 - newScale) / 2;
+			display.addScoreboardTag("chisel_axis:X");
+		}
+		case UP -> {
+			scale.y = newScale;
+			offset.y = (1 - newScale);
+			display.addScoreboardTag("chisel_axis:Y");
+		}
+		case DOWN -> {
+			scale.y = newScale;
+			offset.y = (1 - newScale) / 2;
+			display.addScoreboardTag("chisel_axis:Y");
+		}
+		}
+		
+		Transformation t = new Transformation(offset, new AxisAngle4f(), scale, new AxisAngle4f());
+		display.setTransformation(t);
 	}
 
 	public void checkChiselLeftClick(PlayerInteractEvent event, ItemStack item) {
@@ -725,6 +749,18 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		    }
 		}
 
+		if (hitEntity == null) {
+			Block block = event.getClickedBlock();
+			if (block != null && block.getType() == Material.IRON_TRAPDOOR) {
+				Collection<Entity> nearbyEntities = block.getLocation().add(0.5f, 0.5f, 0.5f).getNearbyEntitiesByType(BlockDisplay.class, 1);
+				for (Entity e : nearbyEntities) {
+					if (e.getScoreboardTags().contains("thin_wall")) {
+						hitEntity = e;
+						break;
+					}
+				}
+			}
+		}
 
 		if (hitEntity != null && hitEntity instanceof BlockDisplay display) {
 			if (!hitEntity.getScoreboardTags().contains("thin_wall"))
@@ -735,12 +771,14 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			boolean canDrop = scale.x >= 0.5f && scale.y >= 0.5f && scale.z >= 0.5f;
 
 			Material mat = display.getBlock().getMaterial();
+			display.getLocation().getBlock().setType(Material.AIR);
 			display.remove();
 			event.getPlayer().sendMessage("Removing blockdisplay");
 
 			if (canDrop) {
 				event.getPlayer().getWorld().dropItemNaturally(display.getLocation(), new ItemStack(mat));
 			}
+			
 
 			event.setCancelled(true);
 		}
