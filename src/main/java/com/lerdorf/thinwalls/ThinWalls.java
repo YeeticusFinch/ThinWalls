@@ -495,7 +495,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		    }
 	    }
 	    
-		Bukkit.broadcastMessage(block.getType() + " full cube --> " + isFullCube);
+		//Bukkit.broadcastMessage(block.getType() + " full cube --> " + isFullCube);
 		
 		return isFullCube;
 	}
@@ -561,20 +561,6 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 				Collection<Entity> nearbyEntities = block.getLocation().add(0.5f, 0.5f, 0.5f).getNearbyEntitiesByType(BlockDisplay.class, 1);
 				for (Entity e : nearbyEntities) {
 					if (e.getScoreboardTags().contains("thin_wall")) {
-						hitEntity = e;
-						break;
-					}
-				}
-			}
-			else if (block != null) {
-				BlockFace face = event.getBlockFace();
-				Location loc = block.getLocation().add(0.5f, 0.5f, 0.5f).add(face.getDirection().multiply(0.5f));
-				if (face.getDirection().getX() < -0.01 || face.getDirection().getY() < -0.01
-						|| face.getDirection().getZ() < -0.01)
-					loc.add(face.getDirection().multiply(1 / 16f));
-
-				for (BlockDisplay e : loc.getNearbyEntitiesByType(BlockDisplay.class, 0.5f)) {
-					if (e.isValid() && isAttached(e, block)) {
 						hitEntity = e;
 						break;
 					}
@@ -677,41 +663,41 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	public void setThinWallTransform(BlockDisplay display, BlockFace face, float newScale) {
 		Vector3f scale = new Vector3f(1.05f, 1.05f, 1.05f);
 		Vector3f offset = new Vector3f(-0.025f, -0.025f, -0.025f);
-
+		Bukkit.broadcastMessage(face.toString());
 		switch (face) {
-		case SOUTH -> {
-			scale.z = newScale;
-			//offset.z = (1 - newScale) / 2;
-			offset.z += 0.05f;
-			display.addScoreboardTag("chisel_axis:Z");
-		}
-		case NORTH -> {
-			scale.z = newScale;
-			offset.z += (1 - newScale);
-			display.addScoreboardTag("chisel_axis:Z");
-		}
-		case WEST -> {
-			scale.x = newScale;
-			offset.x += (1 - newScale);
-			display.addScoreboardTag("chisel_axis:X");
-		}
-		case EAST -> {
-			scale.x = newScale;
-			offset.x += 0.05f;
-			//offset.x = (1 - newScale) / 2;
-			display.addScoreboardTag("chisel_axis:X");
-		}
-		case DOWN -> {
-			scale.y = newScale;
-			offset.y += (1 - newScale);
-			display.addScoreboardTag("chisel_axis:Y");
-		}
-		case UP -> {
-			scale.y = newScale;
-			//offset.y += (1 - newScale) / 2;
-			offset.y += 0.05f;
-			display.addScoreboardTag("chisel_axis:Y");
-		}
+			case SOUTH -> {
+				scale.z = newScale;
+				//offset.z = (1 - newScale) / 2;
+				offset.z -= 0.05f;
+				display.addScoreboardTag("chisel_axis:Z");
+			}
+			case NORTH -> {
+				scale.z = newScale;
+				offset.z += (1 - newScale) + 0.05f;
+				display.addScoreboardTag("chisel_axis:Z");
+			}
+			case WEST -> {
+				scale.x = newScale;
+				offset.x += (1 - newScale) + 0.05f;
+				display.addScoreboardTag("chisel_axis:X");
+			}
+			case EAST -> {
+				scale.x = newScale;
+				offset.x -= 0.05f;
+				//offset.x = (1 - newScale) / 2;
+				display.addScoreboardTag("chisel_axis:X");
+			}
+			case DOWN -> {
+				scale.y = newScale;
+				offset.y += (1 - newScale)+0.05f;
+				display.addScoreboardTag("chisel_axis:Y");
+			}
+			case UP -> {
+				scale.y = newScale;
+				//offset.y += (1 - newScale) / 2;
+				offset.y -= 0.05f;
+				display.addScoreboardTag("chisel_axis:Y");
+			}
 		}
 		
 		Transformation t = new Transformation(offset, new AxisAngle4f(), scale, new AxisAngle4f());
@@ -735,7 +721,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 
 		// Search nearby BlockDisplays
 		for (BlockDisplay d : eye.getWorld().getNearbyEntitiesByType(BlockDisplay.class, eye, 5)) {
-		    if (!d.getScoreboardTags().contains("thin_wall")) continue;
+		    if (!d.getScoreboardTags().contains("thin_wall") && !d.getScoreboardTags().contains("paint")) continue;
 
 		    // Get transformation
 		    Transformation t = d.getTransformation();
@@ -776,6 +762,20 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 						break;
 					}
 				}
+			}
+			else if (block != null) {
+			    BlockFace face = event.getBlockFace();
+			    Location loc = block.getLocation().add(0.5f, 0.5f, 0.5f).add(face.getDirection().multiply(0.5f));
+			    if (face.getDirection().getX() < -0.01 || face.getDirection().getY() < -0.01
+			            || face.getDirection().getZ() < -0.01)
+			        loc.add(face.getDirection().multiply(1 / 16f));
+
+			    for (BlockDisplay e : loc.getNearbyEntitiesByType(BlockDisplay.class, 0.2f)) {
+			        if (e.isValid() && e.getScoreboardTags().contains("paint")) {
+			            hitEntity = e;
+			            break;
+			        }
+			    }
 			}
 		}
 
