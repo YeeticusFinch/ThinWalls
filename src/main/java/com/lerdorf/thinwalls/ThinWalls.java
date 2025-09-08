@@ -551,6 +551,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		    // Ray trace against this box
 		    if (box.rayTrace(eye.toVector(), dir, 5.0) != null) {
 		        hitEntity = d;
+		        event.getPlayer().sendMessage("Found ThinWall with RayTrace");
 		        break;
 		    }
 		}
@@ -560,8 +561,9 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			if (block != null && block.getType() == Material.IRON_TRAPDOOR) {
 				Collection<Entity> nearbyEntities = block.getLocation().add(0.5f, 0.5f, 0.5f).getNearbyEntitiesByType(BlockDisplay.class, 1);
 				for (Entity e : nearbyEntities) {
-					if (e.getScoreboardTags().contains("thin_wall")) {
-						hitEntity = e;
+					if (e instanceof BlockDisplay disp && disp.getScoreboardTags().contains("thin_wall") && isAttached(disp, block)) {
+						hitEntity = disp;
+						event.getPlayer().sendMessage("Found ThinWall from block");
 						break;
 					}
 				}
@@ -748,13 +750,17 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		    // Ray trace against this box
 		    if (box.rayTrace(eye.toVector(), dir, 5.0) != null) {
 		        hitEntity = d;
+		        event.getPlayer().sendMessage("Found an entity!");
 		        break;
 		    }
 		}
 
 		if (hitEntity == null) {
+			event.getPlayer().sendMessage("Exploring alternate options");
 			Block block = event.getClickedBlock();
 			if (block != null && block.getType() == Material.IRON_TRAPDOOR) {
+
+				event.getPlayer().sendMessage("Hit trapdoor, checking for thin_wall!");
 				Collection<Entity> nearbyEntities = block.getLocation().add(0.5f, 0.5f, 0.5f).getNearbyEntitiesByType(BlockDisplay.class, 1);
 				for (Entity e : nearbyEntities) {
 					if (e.getScoreboardTags().contains("thin_wall")) {
@@ -764,6 +770,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 				}
 			}
 			else if (block != null) {
+				event.getPlayer().sendMessage("Backup paint check attempt");
 			    BlockFace face = event.getBlockFace();
 			    Location loc = block.getLocation().add(0.5f, 0.5f, 0.5f).add(face.getDirection().multiply(0.5f));
 			    if (face.getDirection().getX() < -0.01 || face.getDirection().getY() < -0.01
@@ -782,7 +789,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		if (hitEntity != null && hitEntity instanceof BlockDisplay display) {
 			if (!hitEntity.getScoreboardTags().contains("thin_wall"))
 				return;
-			//event.getPlayer().sendMessage("Hit entity with left click");
+			event.getPlayer().sendMessage("Hit entity with left click");
 
 			Vector3f scale = display.getTransformation().getScale();
 			boolean canDrop = scale.x >= 0.5f && scale.y >= 0.5f && scale.z >= 0.5f;
@@ -790,7 +797,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			Material mat = display.getBlock().getMaterial();
 			display.getLocation().getBlock().setType(Material.AIR);
 			display.remove();
-			//event.getPlayer().sendMessage("Removing blockdisplay");
+			event.getPlayer().sendMessage("Removing blockdisplay");
 
 			if (canDrop) {
 				event.getPlayer().getWorld().dropItemNaturally(display.getLocation(), new ItemStack(mat));
