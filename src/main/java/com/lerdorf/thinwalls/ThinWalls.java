@@ -21,6 +21,7 @@ import org.bukkit.Particle.DustOptions;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.TrapDoor;
@@ -68,6 +69,7 @@ import org.joml.AxisAngle4f;
 import net.md_5.bungee.api.ChatColor;
 
 import org.bukkit.block.data.Bisected;
+import org.bukkit.block.data.BlockData;
 
 public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 
@@ -489,8 +491,8 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		    String name = type.name();
 	
 		    // filter common non-full categories
-		    if (name.contains("SLAB") || name.contains("STAIRS") 
-		        || name.contains("DOOR") || name.contains("TRAPDOOR")) {
+		    //if (name.contains("SLAB") || name.contains("STAIRS") || name.contains("DOOR") || name.contains("TRAPDOOR")) {
+		    if (name.contains("DOOR") || name.contains("TRAPDOOR")) {
 		        isFullCube = false;
 		    }
 	    }
@@ -540,7 +542,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		    double hz = scale.z / 2.0;
 
 		    // Apply offset (translation relative to entity pivot)
-		    Vector center = base.clone().add(new Vector(offset.x, offset.y, offset.z));
+		    Vector center = base.clone().add(new Vector(offset.x+0.5f, offset.y+0.5f, offset.z+0.5f));
 
 		    // Construct our own bounding box
 		    BoundingBox box = new BoundingBox(
@@ -550,8 +552,9 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 
 		    // Ray trace against this box
 		    if (box.rayTrace(eye.toVector(), dir, 5.0) != null) {
+		    	boxParticle(Particle.DRIPPING_LAVA, box, eye.getWorld());
 		        hitEntity = d;
-		        event.getPlayer().sendMessage("Found ThinWall with RayTrace");
+		        //event.getPlayer().sendMessage("Found ThinWall with RayTrace");
 		        break;
 		    }
 		}
@@ -563,7 +566,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 				for (Entity e : nearbyEntities) {
 					if (e instanceof BlockDisplay disp && disp.getScoreboardTags().contains("thin_wall") && isAttached(disp, block)) {
 						hitEntity = disp;
-						event.getPlayer().sendMessage("Found ThinWall from block");
+						//event.getPlayer().sendMessage("Found ThinWall from block");
 						break;
 					}
 				}
@@ -612,14 +615,25 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			// Reduce thickness
 			float newScale = currentScale - 0.15f;
 			if (newScale <= 0.25f) {
+				/*
 				display.getWorld().playSound(display.getLocation(), Sound.BLOCK_STONE_BREAK, 1.0f, 1.0f);
 				display.getLocation().getBlock().setType(Material.AIR);
 				display.remove(); // too thin, delete
 				return;
+				*/
+				newScale = 0.2f;
+			}
+			
+			String blockfaceTag = "";
+			for (String tag : hitEntity.getScoreboardTags()) {
+				if (tag.contains("blockface:")) {
+					blockfaceTag = tag.substring(tag.indexOf(':')+1);
+					break;
+				}
 			}
 
 			// Apply new scale & offset
-			setThinWallTransform(display, event.getBlockFace(), newScale);
+			setThinWallTransform(display, blockfaceTag != null ? BlockFace.valueOf(blockfaceTag) : event.getBlockFace(), newScale);
 
 			// Feedback
 			display.getWorld().playSound(display.getLocation(), Sound.BLOCK_STONE_PLACE, 0.8f, 1.0f);
@@ -646,10 +660,12 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			Material mat = block.getType();
 
 			// Replace with BlockDisplay
+			BlockData data = block.getBlockData();
 			block.setType(Material.AIR);
 			BlockDisplay display = loc.getWorld().spawn(loc, BlockDisplay.class);
-			display.setBlock(Bukkit.createBlockData(mat));
+			display.setBlock(data);
 			display.addScoreboardTag("thin_wall");
+			display.addScoreboardTag("blockface:"+event.getBlockFace().toString());
 
 			// Start scale at full, shrink on clicked face
 			float newScale = 0.8f; // first shrink
@@ -662,10 +678,69 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		}
 	}
 	
+	private void boxParticle(Particle particle, BoundingBox box, World world) {
+		
+		for (double x = box.getMinX(); x < box.getMaxX(); x+=0.1) {
+			double y = box.getMinY();
+			double z = box.getMinZ();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			y = box.getMaxY();
+			z = box.getMinZ();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			y = box.getMinY();
+			z = box.getMaxZ();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			y = box.getMaxY();
+			z = box.getMaxZ();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+		}
+
+
+		for (double y = box.getMinY(); y < box.getMaxY(); y+=0.1) {
+			double x = box.getMinX();
+			double z = box.getMinZ();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			x = box.getMaxX();
+			z = box.getMinZ();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			x = box.getMinX();
+			z = box.getMaxZ();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			x = box.getMaxX();
+			z = box.getMaxZ();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+		}
+		
+
+		for (double z = box.getMinZ(); z < box.getMaxZ(); z+=0.1) {
+			double x = box.getMinX();
+			double y = box.getMinY();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			x = box.getMaxX();
+			y = box.getMinY();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			x = box.getMinX();
+			y = box.getMaxY();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+
+			x = box.getMaxX();
+			y = box.getMaxY();
+			world.spawnParticle(particle, x, y, z, 1, 0, 0, 0, 0);
+		}
+	}
+
 	public void setThinWallTransform(BlockDisplay display, BlockFace face, float newScale) {
 		Vector3f scale = new Vector3f(1.05f, 1.05f, 1.05f);
 		Vector3f offset = new Vector3f(-0.025f, -0.025f, -0.025f);
-		Bukkit.broadcastMessage(face.toString());
+		//Bukkit.broadcastMessage(face.toString());
 		switch (face) {
 			case SOUTH -> {
 				scale.z = newScale;
@@ -750,17 +825,17 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		    // Ray trace against this box
 		    if (box.rayTrace(eye.toVector(), dir, 5.0) != null) {
 		        hitEntity = d;
-		        event.getPlayer().sendMessage("Found an entity!");
+		        //event.getPlayer().sendMessage("Found an entity!");
 		        break;
 		    }
 		}
 
 		if (hitEntity == null) {
-			event.getPlayer().sendMessage("Exploring alternate options");
+			//event.getPlayer().sendMessage("Exploring alternate options");
 			Block block = event.getClickedBlock();
 			if (block != null && block.getType() == Material.IRON_TRAPDOOR) {
 
-				event.getPlayer().sendMessage("Hit trapdoor, checking for thin_wall!");
+				//event.getPlayer().sendMessage("Hit trapdoor, checking for thin_wall!");
 				Collection<Entity> nearbyEntities = block.getLocation().add(0.5f, 0.5f, 0.5f).getNearbyEntitiesByType(BlockDisplay.class, 1);
 				for (Entity e : nearbyEntities) {
 					if (e.getScoreboardTags().contains("thin_wall")) {
@@ -770,7 +845,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 				}
 			}
 			else if (block != null) {
-				event.getPlayer().sendMessage("Backup paint check attempt");
+				//event.getPlayer().sendMessage("Backup paint check attempt");
 			    BlockFace face = event.getBlockFace();
 			    Location loc = block.getLocation().add(0.5f, 0.5f, 0.5f).add(face.getDirection().multiply(0.5f));
 			    if (face.getDirection().getX() < -0.01 || face.getDirection().getY() < -0.01
@@ -789,7 +864,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 		if (hitEntity != null && hitEntity instanceof BlockDisplay display) {
 			if (!hitEntity.getScoreboardTags().contains("thin_wall"))
 				return;
-			event.getPlayer().sendMessage("Hit entity with left click");
+			//event.getPlayer().sendMessage("Hit entity with left click");
 
 			Vector3f scale = display.getTransformation().getScale();
 			boolean canDrop = scale.x >= 0.5f && scale.y >= 0.5f && scale.z >= 0.5f;
@@ -797,7 +872,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 			Material mat = display.getBlock().getMaterial();
 			display.getLocation().getBlock().setType(Material.AIR);
 			display.remove();
-			event.getPlayer().sendMessage("Removing blockdisplay");
+			//event.getPlayer().sendMessage("Removing blockdisplay");
 
 			if (canDrop) {
 				event.getPlayer().getWorld().dropItemNaturally(display.getLocation(), new ItemStack(mat));
