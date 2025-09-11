@@ -177,7 +177,30 @@ public class Resources {
 		+ "red_concrete_powder\r\n"
 		+ "light_gray_concrete_powder\r\n"
 		+ "white_concrete_powder\r\n"
-		+ "yellow_concrete_powder";
+		+ "yellow_concrete_powder\r\n"
+
+		+ "black_stained_glass\r\n"
+		+ "blue_stained_glass\r\n"
+		+ "brown_stained_glass\r\n"
+		+ "cyan_stained_glass\r\n"
+		+ "gray_stained_glass\r\n"
+		+ "green_stained_glass\r\n"
+		+ "light_blue_stained_glass\r\n"
+		+ "lime_stained_glass\r\n"
+		+ "magenta_stained_glass\r\n"
+		+ "orange_stained_glass\r\n"
+		+ "pink_stained_glass\r\n"
+		+ "purple_stained_glass\r\n"
+		+ "red_stained_glass\r\n"
+		+ "light_gray_stained_glass\r\n"
+		+ "white_stained_glass\r\n"
+		+ "yellow_stained_glass\r\n"
+		+ "smooth_stone\r\n"
+		+ "blackstone\r\n"
+		+ "polished_blackstone\r\n"
+		+ "polished_blackstone_bricks\r\n"
+		+ "chiseled_polished_blacksotne\r\n"
+		+ "cracked_polished_blackstone_bricks\r\n";
 	
 	public static Material[] matArray = new Material[] {
 		Material.BEACON,
@@ -284,6 +307,8 @@ public class Resources {
 		Material.QUARTZ_BLOCK,
 		Material.CHISELED_QUARTZ_BLOCK,
 		Material.QUARTZ_PILLAR,
+		Material.QUARTZ_BRICKS,
+		Material.SMOOTH_QUARTZ,
 		Material.NETHER_QUARTZ_ORE,
 		Material.REDSTONE_BLOCK,
 		Material.REDSTONE_ORE,
@@ -351,7 +376,31 @@ public class Resources {
 		Material.RED_CONCRETE_POWDER,
 		Material.LIGHT_GRAY_CONCRETE_POWDER,
 		Material.WHITE_CONCRETE_POWDER,
-		Material.YELLOW_CONCRETE_POWDER
+		Material.YELLOW_CONCRETE_POWDER,
+		
+
+		Material.BLACK_STAINED_GLASS,
+		Material.BLUE_STAINED_GLASS,
+		Material.BROWN_STAINED_GLASS,
+		Material.CYAN_STAINED_GLASS,
+		Material.GRAY_STAINED_GLASS,
+		Material.GREEN_STAINED_GLASS,
+		Material.LIGHT_BLUE_STAINED_GLASS,
+		Material.LIME_STAINED_GLASS,
+		Material.MAGENTA_STAINED_GLASS,
+		Material.ORANGE_STAINED_GLASS,
+		Material.PINK_STAINED_GLASS,
+		Material.PURPLE_STAINED_GLASS,
+		Material.RED_STAINED_GLASS,
+		Material.LIGHT_GRAY_STAINED_GLASS,
+		Material.WHITE_STAINED_GLASS,
+		Material.YELLOW_STAINED_GLASS,
+		Material.SMOOTH_STONE,
+		Material.BLACKSTONE,
+		Material.POLISHED_BLACKSTONE,
+		Material.POLISHED_BLACKSTONE_BRICKS,
+		Material.CHISELED_POLISHED_BLACKSTONE,
+		Material.CRACKED_POLISHED_BLACKSTONE_BRICKS
 	};
 	
 	public static String[] textureArray = textureNames.split("\r\n");

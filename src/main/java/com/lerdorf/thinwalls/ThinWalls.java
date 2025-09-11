@@ -621,7 +621,7 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 				display.remove(); // too thin, delete
 				return;
 				*/
-				newScale = 0.2f;
+				newScale = 0.25f;
 			}
 			
 			String blockfaceTag = "";
@@ -738,41 +738,43 @@ public class ThinWalls extends JavaPlugin implements Listener, TabExecutor {
 	}
 
 	public void setThinWallTransform(BlockDisplay display, BlockFace face, float newScale) {
-		Vector3f scale = new Vector3f(1.05f, 1.05f, 1.05f);
-		Vector3f offset = new Vector3f(-0.025f, -0.025f, -0.025f);
-		//Bukkit.broadcastMessage(face.toString());
+		Vector3f scale = new Vector3f(1.04f, 1.04f, 1.04f);
+		float displace = 0.025f;
+		Vector3f offset = new Vector3f(-displace, -displace, -displace);
+		Bukkit.broadcastMessage(face.toString());
+		displace *= 1.5f;
 		switch (face) {
 			case SOUTH -> {
 				scale.z = newScale;
 				//offset.z = (1 - newScale) / 2;
-				offset.z -= 0.05f;
+				offset.z -= displace*0.75f;
 				display.addScoreboardTag("chisel_axis:Z");
 			}
 			case NORTH -> {
 				scale.z = newScale;
-				offset.z += (1 - newScale) + 0.05f;
+				offset.z += (1 - newScale) + displace;
 				display.addScoreboardTag("chisel_axis:Z");
 			}
 			case WEST -> {
 				scale.x = newScale;
-				offset.x += (1 - newScale) + 0.05f;
+				offset.x += (1 - newScale) + displace;
 				display.addScoreboardTag("chisel_axis:X");
 			}
 			case EAST -> {
 				scale.x = newScale;
-				offset.x -= 0.05f;
+				offset.x -= displace*0.75f;
 				//offset.x = (1 - newScale) / 2;
 				display.addScoreboardTag("chisel_axis:X");
 			}
 			case DOWN -> {
 				scale.y = newScale;
-				offset.y += (1 - newScale)+0.05f;
+				offset.y += (1 - newScale)+displace;
 				display.addScoreboardTag("chisel_axis:Y");
 			}
 			case UP -> {
 				scale.y = newScale;
 				//offset.y += (1 - newScale) / 2;
-				offset.y -= 0.05f;
+				offset.y -= displace;
 				display.addScoreboardTag("chisel_axis:Y");
 			}
 		}
